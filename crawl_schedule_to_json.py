@@ -12,10 +12,8 @@ import locale
 import os
 import sys 
 
-# --- FIX LỖI UNICODE (QUAN TRỌNG) ---
-# Dòng này giúp in được tiếng Việt và icon trên Windows của GitHub Actions
+# --- FIX LỖI UNICODE ---
 sys.stdout.reconfigure(encoding='utf-8')
-# ------------------------------------
 
 # --- CẤU HÌNH ---
 URL_LOGIN = "https://mydtu.duytan.edu.vn/Signin.aspx"
@@ -23,11 +21,9 @@ URL_SCHEDULE = "https://mydtu.duytan.edu.vn/Sites/index.aspx?p=home_schedule"
 USERNAME = "trancongsang1"
 PASSWORD = "Alice#1691"
 OUTPUT_FILE = "lich_hoc_hom_nay_va_mai.json"
-# ----------------
 
 # Đặt locale
-try:
-    locale.setlocale(locale.LC_TIME, 'vi_VN.UTF-8')
+try: locale.setlocale(locale.LC_TIME, 'vi_VN.UTF-8')
 except:
     try: locale.setlocale(locale.LC_TIME, 'vi_VN')
     except: pass
@@ -42,24 +38,23 @@ def crawl_schedule_to_json():
     
     print(f"🚀 [CHROME] Dang lay lich cho {TODAY} va {TOMORROW}...")
     
-    # --- CẤU HÌNH CHROME CHO GITHUB ACTIONS ---
     options = webdriver.ChromeOptions()
     options.add_argument("--headless") 
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--window-size=1920,1080")
+    # QUAN TRỌNG: Giả mạo trình duyệt thật để không bị chặn
+    options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
     
-    # Tự động cài đặt Driver Chrome phù hợp
     try:
         service = ChromeService(ChromeDriverManager().install())
         driver = webdriver.Chrome(service=service, options=options)
     except Exception as e:
-        print(f"❌ Lỗi Driver: {e}")
-        return
+        print(f"❌ Lỗi Driver: {e}"); return
     
     data_output = {
-        "status": "error", "message": "Chưa chạy xong.",
+        "status": "error", "message": "Chua chay xong.",
         "ngay_lay": date.today().strftime("%d-%m-%Y %H:%M:%S"),
         "hom_nay": TODAY, "ngay_mai": TOMORROW, "lich_hoc": []
     }
@@ -67,20 +62,18 @@ def crawl_schedule_to_json():
     try:
         driver.get(URL_LOGIN)
         wait = WebDriverWait(driver, 20)
-
-        # --- ĐĂNG NHẬP ---
         print("[...] Dang dang nhap...")
+        
         for i in range(15):
             try:
                 wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, "input[id$='txtUser']"))).clear()
                 driver.find_element(By.CSS_SELECTOR, "input[id$='txtUser']").send_keys(USERNAME)
-                
                 driver.find_element(By.CSS_SELECTOR, "input[type='password']").clear()
                 driver.find_element(By.CSS_SELECTOR, "input[type='password']").send_keys(PASSWORD)
                 
-                # Xử lý Captcha
                 captcha_img = driver.find_element(By.CSS_SELECTOR, ".login-form img, img[src*='Captcha']")
                 code = ddddocr.DdddOcr(show_ad=False).classification(captcha_img.screenshot_as_png)
+                print(f"   -> Lan {i+1}: Captcha = {code}") # In ra để theo dõi
                 
                 if len(code) != 4:
                     driver.find_element(By.CSS_SELECTOR, "img[src*='Captcha']").click()
@@ -92,19 +85,16 @@ def crawl_schedule_to_json():
                 time.sleep(3)
                 
                 if "Signin.aspx" not in driver.current_url:
-                    print("✅ Dang nhap thanh cong!")
-                    break
+                    print("✅ Dang nhap thanh cong!"); break
             except:
                 driver.refresh()
         else:
             print("❌ Dang nhap that bai het so lan thu."); return
 
-        # --- LẤY LỊCH ---
         driver.get(URL_SCHEDULE)
         wait.until(EC.presence_of_element_located((By.TAG_NAME, "table")))
         rows = driver.find_elements(By.CSS_SELECTOR, "table tr")
         schedule_list = []
-        
         for row in rows:
             cols = row.find_elements(By.TAG_NAME, "td")
             if len(cols) >= 5:
@@ -112,10 +102,8 @@ def crawl_schedule_to_json():
                     ngay = cols[1].text.strip()
                     if ngay == TODAY or ngay == TOMORROW:
                         schedule_list.append({
-                            "ngay_hoc": ngay,
-                            "mon_hoc": cols[2].text.strip(),
-                            "phong_hoc": cols[4].text.strip(),
-                            "tiet": cols[5].text.strip(),
+                            "ngay_hoc": ngay, "mon_hoc": cols[2].text.strip(),
+                            "phong_hoc": cols[4].text.strip(), "tiet": cols[5].text.strip(),
                             "giang_vien": cols[7].text.strip()
                         })
                 except: continue
