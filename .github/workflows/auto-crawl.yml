@@ -2,7 +2,9 @@ name: Auto Crawl DTU Schedule (Chrome)
 
 on:
   schedule:
-    - cron: '0 0,12 * * *'
+    # 23:00 UTC = 6:00 Sáng VN
+    # 05:00 UTC = 12:00 Trưa VN
+    - cron: '0 5,23 * * *'
   workflow_dispatch:
 
 permissions:
@@ -33,7 +35,7 @@ jobs:
         run: |
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
-          git pull origin main --rebase  # <--- DÒNG NÀY SẼ SỬA LỖI GIT ĐỎ LÒM
+          git pull origin main --rebase
           git add lich_hoc_hom_nay_va_mai.json
-          git commit -m "Auto update schedule" || exit 0
+          git commit -m "Auto update schedule (6h & 12h)" || exit 0
           git push
