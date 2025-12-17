@@ -1,6 +1,6 @@
 {
-    "status": "error",
-    "message": "❌ Đăng nhập thất bại.",
+    "status": "success",
+    "message": "Thanh cong",
     "ngay_lay": "17-12-2025 00:00:00",
     "hom_nay": "17/12/2025",
     "ngay_mai": "18/12/2025",
