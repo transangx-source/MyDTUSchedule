@@ -1,0 +1,38 @@
+name: Auto Crawl DTU Schedule (Chrome)
+
+on:
+  schedule:
+    - cron: '0 0,12 * * *' # 7h sáng và 19h tối VN
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install selenium ddddocr gitpython webdriver-manager
+
+      - name: Run Crawler Script
+        run: python crawl_schedule_to_json.py
+
+      - name: Commit and Push changes
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git add lich_hoc_hom_nay_va_mai.json
+          git commit -m "Auto update schedule" || exit 0
+          git push
