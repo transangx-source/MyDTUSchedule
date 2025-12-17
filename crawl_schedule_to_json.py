@@ -10,6 +10,12 @@ from selenium.webdriver.support import expected_conditions as EC
 from datetime import date, timedelta
 import locale
 import os
+import sys 
+
+# --- FIX LỖI UNICODE (QUAN TRỌNG) ---
+# Dòng này giúp in được tiếng Việt và icon trên Windows của GitHub Actions
+sys.stdout.reconfigure(encoding='utf-8')
+# ------------------------------------
 
 # --- CẤU HÌNH ---
 URL_LOGIN = "https://mydtu.duytan.edu.vn/Signin.aspx"
@@ -34,7 +40,7 @@ def crawl_schedule_to_json():
     TODAY = date.today().strftime("%d/%m/%Y")
     TOMORROW = (date.today() + timedelta(days=1)).strftime("%d/%m/%Y")
     
-    print(f"🚀 [CHROME] Đang lấy lịch cho {TODAY} và {TOMORROW}...")
+    print(f"🚀 [CHROME] Dang lay lich cho {TODAY} va {TOMORROW}...")
     
     # --- CẤU HÌNH CHROME CHO GITHUB ACTIONS ---
     options = webdriver.ChromeOptions()
@@ -45,7 +51,12 @@ def crawl_schedule_to_json():
     options.add_argument("--window-size=1920,1080")
     
     # Tự động cài đặt Driver Chrome phù hợp
-    driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
+    try:
+        service = ChromeService(ChromeDriverManager().install())
+        driver = webdriver.Chrome(service=service, options=options)
+    except Exception as e:
+        print(f"❌ Lỗi Driver: {e}")
+        return
     
     data_output = {
         "status": "error", "message": "Chưa chạy xong.",
@@ -58,7 +69,7 @@ def crawl_schedule_to_json():
         wait = WebDriverWait(driver, 20)
 
         # --- ĐĂNG NHẬP ---
-        print("[...] Đang đăng nhập...")
+        print("[...] Dang dang nhap...")
         for i in range(15):
             try:
                 wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, "input[id$='txtUser']"))).clear()
@@ -81,12 +92,12 @@ def crawl_schedule_to_json():
                 time.sleep(3)
                 
                 if "Signin.aspx" not in driver.current_url:
-                    print("✅ Đăng nhập thành công!")
+                    print("✅ Dang nhap thanh cong!")
                     break
             except:
                 driver.refresh()
         else:
-            print("❌ Đăng nhập thất bại hết số lần thử."); return
+            print("❌ Dang nhap that bai het so lan thu."); return
 
         # --- LẤY LỊCH ---
         driver.get(URL_SCHEDULE)
@@ -109,11 +120,11 @@ def crawl_schedule_to_json():
                         })
                 except: continue
 
-        data_output.update({"status": "success", "message": "Thành công", "lich_hoc": schedule_list})
-        print(f"✅ Lấy được {len(schedule_list)} tiết học.")
+        data_output.update({"status": "success", "message": "Thanh cong", "lich_hoc": schedule_list})
+        print(f"✅ Lay duoc {len(schedule_list)} tiet hoc.")
 
     except Exception as e:
-        print(f"❌ Lỗi: {e}")
+        print(f"❌ Loi: {e}")
     finally:
         save_json(data_output)
         try: driver.quit()
