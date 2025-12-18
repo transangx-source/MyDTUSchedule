@@ -1,8 +1,8 @@
 {
-    "status": "error",
-    "message": "Chua chay xong.",
-    "ngay_lay": "17-12-2025 00:00:00",
-    "hom_nay": "17/12/2025",
-    "ngay_mai": "18/12/2025",
+    "status": "success",
+    "message": "Thanh cong",
+    "ngay_lay": "18-12-2025 10:48:40",
+    "hom_nay": "18/12/2025",
+    "ngay_mai": "19/12/2025",
     "lich_hoc": []
 }
