@@ -2,19 +2,16 @@ name: Auto Crawl DTU Schedule (Chrome)
 
 on:
   schedule:
-    # 1:30 AM VN (Sáng sớm) = 18:30 UTC hôm trước
+    # 1:30 AM VN  = 18:30 UTC
     - cron: '30 18 * * *'
-    
-    # 6:00 AM VN (Sáng dậy) = 23:00 UTC hôm trước
+    # 6:00 AM VN  = 23:00 UTC
     - cron: '0 23 * * *'
-    
-    # 11:30 AM VN (Tan học sáng) = 04:30 UTC
+    # 11:30 AM VN = 04:30 UTC
     - cron: '30 4 * * *'
-    
-    # 12:00 PM VN (Ăn trưa xong) = 05:00 UTC
+    # 12:00 PM VN = 05:00 UTC
     - cron: '0 5 * * *'
 
-  workflow_dispatch: # Cho phép bấm chạy tay
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -41,10 +38,20 @@ jobs:
         run: python crawl_schedule_to_json.py
 
       - name: Commit and Push changes
+        # DÒNG QUAN TRỌNG: Chuyển sang dùng Bash để không bị lỗi lệnh exit
+        shell: bash
         run: |
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
           git pull origin main --rebase
           git add lich_hoc_hom_nay_va_mai.json
-          git commit -m "Auto update: 1h30, 6h, 11h30, 12h" || exit 0
-          git push
+          
+          # Kiểm tra xem có gì thay đổi không. Nếu có thì commit, không thì thôi.
+          if [[ -n $(git status -s) ]]; then
+            git commit -m "Auto update schedule"
+            git push
+            echo "✅ Da day code moi len GitHub!"
+          else
+            echo "⚠️ Khong co gi thay doi de luu."
+            exit 0
+          fi
