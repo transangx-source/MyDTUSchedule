@@ -9,7 +9,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from datetime import date, timedelta
 import locale
-import os
 import sys 
 
 # --- FIX LỖI UNICODE ---
@@ -36,7 +35,7 @@ def crawl_schedule_to_json():
     TODAY = date.today().strftime("%d/%m/%Y")
     TOMORROW = (date.today() + timedelta(days=1)).strftime("%d/%m/%Y")
     
-    print(f"🚀 [V3-Fix] Dang thu lay lich cho {TODAY} va {TOMORROW}...")
+    print(f"🚀 [V4-Final] Bat dau lay lich cho {TODAY} va {TOMORROW}...")
     
     options = webdriver.ChromeOptions()
     options.add_argument("--headless") 
@@ -44,56 +43,48 @@ def crawl_schedule_to_json():
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--window-size=1920,1080")
-    # User-Agent xịn hơn để không bị chặn
+    # QUAN TRỌNG: Giả danh trình duyệt thật để không bị chặn
     options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
     
     try:
         service = ChromeService(ChromeDriverManager().install())
         driver = webdriver.Chrome(service=service, options=options)
     except Exception as e:
-        print(f"❌ Lỗi Driver: {e}"); return
+        print(f"❌ Loi Driver: {e}"); return
     
-    # Khởi tạo OCR một lần cho nhanh
     ocr = ddddocr.DdddOcr(show_ad=False)
     
     data_output = {
-        "status": "error", "message": "Chua chay xong.",
+        "status": "error", 
+        "message": "Chua chay xong.",
         "ngay_lay": date.today().strftime("%d-%m-%Y %H:%M:%S"),
         "hom_nay": TODAY, "ngay_mai": TOMORROW, "lich_hoc": []
     }
 
     try:
         driver.get(URL_LOGIN)
-        wait = WebDriverWait(driver, 30) # Tăng thời gian chờ lên 30s
-        print("[...] Dang vao trang dang nhap...")
+        wait = WebDriverWait(driver, 30)
+        print("[...] Dang dang nhap...")
         
         login_success = False
-        for i in range(20): # Tăng số lần thử lên 20
+        for i in range(20): # Thử 20 lần
             try:
-                # Chờ các ô nhập liệu hiện ra
                 wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, "input[id$='txtUser']"))).clear()
                 driver.find_element(By.CSS_SELECTOR, "input[id$='txtUser']").send_keys(USERNAME)
-                
                 driver.find_element(By.CSS_SELECTOR, "input[type='password']").clear()
                 driver.find_element(By.CSS_SELECTOR, "input[type='password']").send_keys(PASSWORD)
                 
-                # Chụp và giải mã Captcha
-                time.sleep(1) # Chờ ảnh load kỹ
+                time.sleep(1)
                 captcha_img = driver.find_element(By.CSS_SELECTOR, ".login-form img, img[src*='Captcha']")
                 code = ocr.classification(captcha_img.screenshot_as_png)
-                print(f"   -> Thu lan {i+1}: Captcha doc duoc = '{code}'")
+                print(f"   -> Thu lan {i+1}: Captcha = {code}")
                 
                 if len(code) != 4:
-                    print("      (Captcha sai dinh dang -> Refresh)")
                     driver.refresh(); time.sleep(2); continue
                 
                 driver.find_element(By.CSS_SELECTOR, "input[id$='txtCaptcha']").clear()
                 driver.find_element(By.CSS_SELECTOR, "input[id$='txtCaptcha']").send_keys(code)
-                
-                # Bấm nút đăng nhập
                 driver.find_element(By.CSS_SELECTOR, "input[type='submit'], input[id$='btnLogin']").click()
-                
-                # Chờ kết quả lâu hơn chút (5s)
                 time.sleep(5)
                 
                 if "Signin.aspx" not in driver.current_url:
@@ -101,20 +92,17 @@ def crawl_schedule_to_json():
                     login_success = True
                     break
                 else:
-                    print("      (Dang nhap truot -> Thu lai)")
-                    driver.refresh() # QUAN TRỌNG: F5 lại trang để lấy Captcha mới sạch sẽ
-                    time.sleep(2)
-            except Exception as e:
-                print(f"   -> Loi kithuat: {e}")
+                    driver.refresh(); time.sleep(2)
+            except:
                 driver.refresh(); time.sleep(2)
         
         if not login_success:
-            print("❌ That bai sau 20 lan thu. Bo tay!"); 
-            data_output["message"] = "Loi: That bai 20 lan dang nhap (MyDTU chan hoac mang lag)."
+            print("❌ That bai sau 20 lan thu."); 
+            data_output["message"] = "Loi: Khong the dang nhap vao MyDTU."
+            save_json(data_output)
             return
 
         # --- LẤY LỊCH ---
-        print("[...] Dang lay du lieu lich...")
         driver.get(URL_SCHEDULE)
         wait.until(EC.presence_of_element_located((By.TAG_NAME, "table")))
         rows = driver.find_elements(By.CSS_SELECTOR, "table tr")
@@ -133,8 +121,9 @@ def crawl_schedule_to_json():
                         })
                 except: continue
 
+        # QUAN TRỌNG: Ghi status success ngay cả khi không có môn học nào
         data_output.update({"status": "success", "message": "Thanh cong", "lich_hoc": schedule_list})
-        print(f"✅ Lay duoc {len(schedule_list)} tiet hoc.")
+        print(f"✅ Da lay xong. So mon hoc: {len(schedule_list)}")
 
     except Exception as e:
         print(f"❌ Loi He Thong: {e}")
